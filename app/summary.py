@@ -1,4 +1,4 @@
-from app.agents import STOPWORDS
+from app.config import STOPWORDS
 from itertools import combinations
 import networkx as nx
 import numpy as np
@@ -14,7 +14,7 @@ def unique_words_similarity(sentence1, sentence2):
     """
     sentence1 = set(sentence1)
     sentence2 = set(sentence2)
-    if not len(sentence1) or not len(sentence2):
+    if len(sentence1) <= 1 or len(sentence2) <= 1:
         return 0.0
     return len(sentence1.intersection(sentence2)) / (np.log10(len(sentence1)) + np.log10(len(sentence2)))
 
@@ -32,9 +32,9 @@ def tokenization_sentences(text):
     return new_text
 
 
-def gen_text_rank_summary(text, calc_similarity=unique_words_similarity, summary_part=0.5):
+def text_rank_summary(text, summary_part=0.1):
     """
-    Составление summary с помощью TextRank
+    Функция для составления summary с помощью TextRank
     """
     # Разбиваем текст на предложения
     sentences = [sentence.text for sentence in razdel.sentenize(text)]
@@ -51,7 +51,7 @@ def gen_text_rank_summary(text, calc_similarity=unique_words_similarity, summary
     pairs = combinations(range(n_sentences), 2)
     # Для каждой пары предложений считаем близость (получачем кортежи
     # с номерами преложений и значением близости (0, 1, 0,589))
-    scores = [(i, j, calc_similarity(sentences_words[i], sentences_words[j])) for i, j in pairs]
+    scores = [(i, j, unique_words_similarity(sentences_words[i], sentences_words[j])) for i, j in pairs]
 
     # Строим граф с рёбрами, равными близости между предложениями
     g = nx.Graph()
@@ -74,12 +74,12 @@ def gen_text_rank_summary(text, calc_similarity=unique_words_similarity, summary
     return predicted_summary
 
 
-def calc_text_rank_score(records, site, calc_similarity=unique_words_similarity, summary_part=0.1):
+def reception_summary(records, site, summary_part=0.1):
     for index, news in enumerate(records):
-        predicted_summary = gen_text_rank_summary(news['text'], calc_similarity, summary_part)
-        # predictions.append(predicted_summary)
+        predicted_summary = text_rank_summary(news['text'], summary_part)
         records[index]['summary'] = predicted_summary
     records.reverse()
+    # Занесение данных в зависимости от сайта
     if site == 'CNews':
         with open('app/news/result_CNews.json', 'w', encoding='utf-8') as fp:
             json.dump(records, fp, ensure_ascii=False)

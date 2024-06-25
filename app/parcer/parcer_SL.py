@@ -2,12 +2,13 @@ import requests
 from bs4 import BeautifulSoup
 import random
 import re
-from app.agents import USERAGENTS
+from app.config import USERAGENTS
 from datetime import datetime
 
 
 headers = {'Accept': '*/*',
            'User-Agent': f'{random.choice(USERAGENTS)}'}
+proxies = {'https': 'http://212.102.151.183:8000'}
 start_url = 'https://www.securitylab.ru'
 list_links_seclab = []
 
@@ -15,7 +16,7 @@ list_links_seclab = []
 def parse_SL(page_counter=1):
     while True:
         url = start_url + f'/news/page1_{page_counter}.php'
-        req = requests.get(url, headers)
+        req = requests.get(url=url, headers=headers, proxies=proxies)
         soup = BeautifulSoup(req.text, 'lxml')
         # Получаем все статьи на странице
         all_news = soup.find_all(class_='article-card inline-card')
@@ -35,12 +36,13 @@ def parse_SL(page_counter=1):
         for i in range(len(list_links_seclab)):
             if str(datetime.now().day) not in list_links_seclab[i]["date"]:
                 del list_links_seclab[i:len(list_links_seclab)]
+                print('Собраны все статьи')
                 return list_links_seclab
 
 
 def parse_detail_SL(all_news):
     for index, news in enumerate(all_news):
-        req = requests.get(news['url'], headers)
+        req = requests.get(url=news['url'], headers=headers, proxies=proxies)
         src_1 = req.text
         soup = BeautifulSoup(src_1, 'lxml')
         project_data = soup.find('div', class_='articl-text')

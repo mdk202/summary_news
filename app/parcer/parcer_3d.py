@@ -2,11 +2,13 @@ import requests
 from bs4 import BeautifulSoup
 import random
 import re
-from app.agents import USERAGENTS
+from app.config import USERAGENTS
 from datetime import datetime
+
 
 headers = {'Accept': '*/*',
            'User-Agent': f'{random.choice(USERAGENTS)}'}
+proxies = {'https': 'http://212.102.151.183:8000'}
 start_url = 'https://3dnews.ru'
 list_links_3d = []
 
@@ -14,7 +16,7 @@ list_links_3d = []
 def parse_3d(page_counter=1):
     while True:
         url = start_url + f'/news/page-{page_counter}.html'
-        req = requests.get(url, headers)
+        req = requests.get(url=url, headers=headers, proxies=proxies)
         soup = BeautifulSoup(req.text, 'lxml')
         # Получаем все статьи на странице
         all_news = soup.find_all(class_='marker_allfeed')
@@ -23,10 +25,14 @@ def parse_3d(page_counter=1):
             all_news_dict = {}
             # Получаем время публикации и ссылку на статью
             item_href = item.find('a', class_='entry-header').get('href')
+            item_title = item.find('a', class_='entry-header').text
             item_date = item.find('span', class_='entry-date').text
             # Заносим в словарь данные о статье
             all_news_dict['date'] = item_date
             all_news_dict['url'] = start_url + f'{item_href}'
+            # Проверяем, не ведет ли ссылка статьи на сторонний сайт или обзор
+            if 'http' in item_href or 'Новая статья' in item_title:
+                continue
             # Добавляем статью в список
             list_links_3d.append(all_news_dict)
         page_counter += 1
@@ -39,7 +45,7 @@ def parse_3d(page_counter=1):
 
 def parse_detail_3d(all_news):
     for index, news in enumerate(all_news):
-        req = requests.get(news['url'], headers)
+        req = requests.get(url=news['url'], headers=headers, proxies=proxies)
         src_1 = req.text
         soup = BeautifulSoup(src_1, 'lxml')
         project_data = soup.find('div', class_='js-mediator-article')
@@ -48,7 +54,7 @@ def parse_detail_3d(all_news):
         for item in project_text:
             article_text += item.text
         article_text = re.sub(r'\s+', ' ', article_text)
-        article_text_clean = re.sub(r'(?<=[.,])(?=[^\s])', r' ', article_text)
+        article_text_clean = re.sub(r'(?<=[.])(?=[^\s])', r' ', article_text)
         all_news[index]['text'] = article_text_clean
     print('Получены тексты всех статей с сайта 3DNews\n')
     return all_news

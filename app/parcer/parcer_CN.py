@@ -2,11 +2,12 @@ import requests
 from bs4 import BeautifulSoup
 import random
 import re
-from app.agents import USERAGENTS
+from app.config import USERAGENTS
 
 
 headers = {'Accept': '*/*',
            'User-Agent': f'{random.choice(USERAGENTS)}'}
+proxies = {'https': 'http://212.102.151.183:8000'}
 start_url = 'https://www.cnews.ru/archive/type_top_lenta_articles/page_'
 
 
@@ -14,7 +15,7 @@ def parse_CN(page_counter=1):
     list_links_cnews = []
     while True:
         url = start_url + f'{page_counter}'
-        req = requests.get(url, headers)
+        req = requests.get(url=url, headers=headers, proxies=proxies)
         soup = BeautifulSoup(req.text, 'lxml')
         # Получаем все статьи на странице
         all_news = soup.find_all(class_='allnews_item')
@@ -39,7 +40,7 @@ def parse_CN(page_counter=1):
 
 def parse_detail_CN(all_news):
     for index, news in enumerate(all_news):
-        req = requests.get(news['url'], headers)
+        req = requests.get(url=news['url'], headers=headers,proxies=proxies)
         src_1 = req.text
         soup = BeautifulSoup(src_1, 'lxml')
         project_data = soup.find('article', class_='news_container')
